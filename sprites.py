@@ -56,7 +56,8 @@ class Player(Sprite):
         self.vel = vec(0,0)
         self.pos = vec(x,y) * TILESIZE
         self.cofric = PLAYER_FRIC
-        self.hit_rect = PLAYER_HIT_RECT
+        self.hit_rect = PLAYER_HIT_RECT.copy()
+        self.hit_rect.center = self.pos
         # start with current frames and last update at zero so we can cycle through animations
         self.current_frame = 0
         self.last_update = 0
@@ -64,6 +65,7 @@ class Player(Sprite):
         #accounts for player state (state machine)
         self.jumping = False
         self.moving = False
+        self.on_ice = False
 
         # coins and debug prints
         self.coins = 0 
@@ -72,31 +74,35 @@ class Player(Sprite):
 
     # gets player input
     def get_keys(self):
-        # self.vel = vec(0,0)
-        # self.vx, self.vy = 0,0
         keys = pg.key.get_pressed()
+        if not self.on_ice:
+            self.vel.x = 0
+            self.vel.y = 0
+
         if keys[pg.K_a]:
             # self.vx = -PLAYER_SPEED
-            # self.vel.x = -PLAYER_SPEED
-            self.acc.x = -PLAYER_ACC
+            self.vel.x = -PLAYER_SPEED
+            # self.acc.x = -PLAYER_ACC
+
         if keys[pg.K_d]:
             # self.vx = PLAYER_SPEED
-            # self.vel.x = PLAYER_SPEED
-            self.acc.x = PLAYER_ACC
+            self.vel.x = PLAYER_SPEED
+            # self.acc.x = PLAYER_ACC
+
         if keys[pg.K_w]:
-            # self.vy = -PLAYER_SPEED
-            # self.vel.y = -PLAYER_SPEED
-            self.acc.y = -PLAYER_ACC
+            self.vel.y = -PLAYER_SPEED
+
         if keys[pg.K_s]:
-            # self.vy = PLAYER_SPEED
-            # self.vel.y = PLAYER_SPEED
-            self.acc.y = PLAYER_ACC
-        # if self.vel.x != 0 and self.vel.y != 0:
-        #     self.vel *= 0.7071
+            self.vel.y = PLAYER_SPEED
+
+        if self.vel.length() > 0:
+            self.vel = self.vel.normalize() * PLAYER_SPEED
             # 0.7071 is root(2) which is the hyptenuse of a pixel (1x1)
+            # stops diagonal motion from being faster, not needed for accerlation
     
     def jump(self):
         pass
+
     #loading a spritesheet instead of individual images 
     def load_images(self):
         self.idle_frames = [self.spritesheet.get_image(0,0, TILESIZE,TILESIZE), self.spritesheet.get_image(32,0, TILESIZE,TILESIZE)]
@@ -123,44 +129,28 @@ class Player(Sprite):
             
     def update(self):
         self.animate()
-        self.acc = vec(0,2) # we dont want it to be reset to 0, move it to if its not on ice
-        # self.acc = vec(0,0) # for topdown
+        tile_hits = pg.sprite.spritecollide(self,self.game.all_tiles, False)
+        #prompted by cs50ai and chatgpt
+        self.on_ice = any(tile.variant == "ice" for tile in tile_hits)
 
         #physics/acceleration math done here before updates (most tweaked/updated code section)
-        
         self.get_keys()
-        self.acc.x += self.vel.x * self.cofric
-        # self.acc.y += self.vel.y * self.cofric
+        #ice friction, prompted by cs50ai and chatgpt
+        if self.on_ice:
+            self.vel.x *= 0.98
+            self.vel.y *= 0.98  
 
-        #self.acc.y += self.vel.y# use for gravity (if self.acc = vec(0,9.8))
-        self.vel += self.acc
+        #x collisions
+        self.pos.x += self.vel.x
+        self.hit_rect.centerx = self.pos.x
+        collide_with_walls(self, self.game.all_walls, 'x')
+        #y collisions
+        self.pos.y += self.vel.y
+        self.hit_rect.centery = self.pos.y
+        collide_with_walls(self, self.game.all_walls, 'y')
 
-        #Mr. Cozort prompted ai to get this acceleration math
-        # max_fall_speed = TILESIZE / max(self.game.dt, 0.001)
-        # self.vel.y = min(self.vel.y, max_fall_speed)
-
-        #condtional makes sure we arent moving when still (no decimal accelerations)
-        if abs(self.vel.x) < 0.1:
-            self.vel.x = 0
-        if abs(self.vel.y) < 0.1:
-            self.vel.y = 0
-
-        # self.pos += self.vel * self.game.dt   
-        # mr. Cozort also prompted ai to alter this "kinematic acceleration equation"
-        self.pos += self.vel + 0.5 * self.acc
-        # self.pos += self.vel + 0.5 * self.acc
-
-        #sets the rectangle's position to the pos which is manipulated by all the math and vector stuff we did above
-        self.rect.center = self.pos
-
-        #checks collisions
-        tile_hits = pg.sprite.spritecollide(self,self.game.all_tiles, False)
-        if tile_hits:
-            if tile_hits[0].variant == "ice":
-                self.cofric = -0.001
-            else:
-                self.cofric = -0.01
-
+        #actually setting the player's coords to based on collisions
+        self.rect.center = self.hit_rect.center
         #collisions = hits, algortihm to check if colliding
         hits = pg.sprite.spritecollide(self, self.game.all_coins, True)
         if hits:
@@ -171,14 +161,9 @@ class Player(Sprite):
                 Particle(self.game, hits[0].rect.x, hits[0].rect.y)
                 hits[0].kill()
 
-        #collision with walls done here
-        self.hit_rect.centerx = self.pos.x
-        collide_with_walls(self, self.game.all_walls, 'x')
-        self.hit_rect.centery = self.pos.y
-        collide_with_walls(self, self.game.all_walls, 'y')
-
-        #actually setting the player's coords to based on collisions
-        self.rect.center = self.hit_rect.center
+        spike_hits = pg.sprite.spritecollide(self, self.game.all_spikes, False)
+        if spike_hits:
+            self.game.player_died()
 
 #walls make up the maze
 class Wall(Sprite):
@@ -217,7 +202,7 @@ class Spike(Sprite):
 
 class FloorTile(Sprite):
     def __init__(self, game, x, y):
-        self.groups = game.all_sprites, game.all_tiles, game.all_walls
+        self.groups = game.all_sprites, game.all_tiles
         Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pg.Surface((TILESIZE, TILESIZE))

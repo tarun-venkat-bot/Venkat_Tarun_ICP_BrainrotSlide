@@ -41,6 +41,7 @@ class Game:
         self.playing = True
         self.score = 0
         self.highscore = 0
+        
 
     #physically load map info from map file
     def load_data(self, map):
@@ -123,6 +124,10 @@ class Game:
                 if self.playing:
                     self.playing = False
                 self.running = False
+
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_w:
+                    self.player.jump()
 
     #refreshes the screen and anything drawn.
     def update(self):
