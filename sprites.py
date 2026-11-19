@@ -181,8 +181,9 @@ class Spike(Sprite):
         self.groups = game.all_sprites, game.all_spikes
         Sprite.__init__(self, self.groups)
         self.game = game
+        self.spritesheet = Spritesheet(path.join(self.game.img_dir, "spike.png"))
         self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image.fill(CYAN)
+        self.image = self.spritesheet.get_image(0,0,TILESIZE, TILESIZE)
         self.rect = self.image.get_rect()
         self.vel = vec(0,0)
         self.pos = vec(x,y) *TILESIZE
