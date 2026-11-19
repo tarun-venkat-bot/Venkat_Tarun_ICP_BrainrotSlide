@@ -166,8 +166,9 @@ class Wall(Sprite):
         self.groups = game.all_sprites, game.all_walls
         Sprite.__init__(self, self.groups)
         self.game = game
+        self.spritesheet = Spritesheet(path.join(self.game.img_dir, "brick.png"))
         self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image.fill(MAGENTA)
+        self.image = self.spritesheet.get_image(0,0,TILESIZE, TILESIZE)
         self.rect = self.image.get_rect()
         self.vel = vec(0,0)
         self.pos = vec(x,y) *TILESIZE
@@ -299,14 +300,11 @@ class Bomb(Sprite):
         self.groups = game.all_sprites, game.all_coins
         Sprite.__init__(self, self.groups)
         self.game = game
-
-        #code prompted to chatgpt with assistance from cs50.ai
-        # self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image = pg.Surface((TILESIZE, TILESIZE)) 
-        # pg.SCRALPHA is a pygame method to make an object's parts transparent
-        pg.draw.circle(self.image, GOLD, (TILESIZE//2, TILESIZE//2), TILESIZE//2)  
-        
+        self.spritesheet = Spritesheet(path.join(self.game.img_dir, "coin.png"))
+        self.image = pg.Surface((TILESIZE, TILESIZE))
+        self.image = self.spritesheet.get_image(0,0,TILESIZE, TILESIZE)
         self.rect = self.image.get_rect()
+        
         self.vel = vec(0,0)
         self.pos = vec(x,y) *TILESIZE
         self.rect.center = self.pos

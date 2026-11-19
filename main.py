@@ -80,7 +80,7 @@ class Game:
     #make a new level and screen
     def new(self):
         self.load_data('level1.txt')
-        self.all_sprites = pg.sprite.Group()
+        self.all_sprites = pg.sprite.Group() 
         self.all_walls = pg.sprite.Group()
         self.all_coins = pg.sprite.Group()
         self.all_particles = pg.sprite.Group()
