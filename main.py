@@ -10,15 +10,15 @@ Process - input processed (direction of control, magnitude)
 Output - draw new pixels, sound, haptic (senses)
 (Store)
 
-GOALS: get to a shark character
-RULES: time limit, no touching cup enemies
-FEEDBACK: screen turns red if touching enemy, gold if touching target
-FREEDOM: movement within walls, ability to touch enemies or targets
+# GOALS: get to a shark character
+# RULES: time limit, no touching cup enemies
+# FEEDBACK: screen turns red if touching enemy, gold if touching target
+# FREEDOM: movement within walls, ability to touch enemies or targets
 
-GOALS: hit all the plant bombs to defuse them
-RULES: defuse them within time or blow up, dont touch enemies
-FEEDBACK: ticking sound when time moves on
-FREEDOM: fight enemies, defuse bombs, etc.
+GOALS: colelct all the coins
+RULES: don't touch blue spikes
+FEEDBACK: game freezes if player touches blue spike
+FREEDOM: movement in lines until touching a wall, choice of different paths
 """
 
 import pygame as pg
@@ -41,7 +41,15 @@ class Game:
         self.playing = True
         self.score = 0
         self.highscore = 0
-        
+
+        self.player_dead = False
+        self.death_start = 0  
+
+    def player_died(self):  
+        if not self.player_dead:
+            self.player_dead = True
+            self.death_start = pg.time.get_ticks()
+            print("PLAYER DIED")
 
     #physically load map info from map file
     def load_data(self, map):
@@ -74,10 +82,8 @@ class Game:
         self.load_data('level1.txt')
         self.all_sprites = pg.sprite.Group()
         self.all_walls = pg.sprite.Group()
-        self.all_mobs = pg.sprite.Group()
         self.all_coins = pg.sprite.Group()
         self.all_particles = pg.sprite.Group()
-        self.all_tiles = pg.sprite.Group()
         self.all_spikes = pg.sprite.Group()
 
         #instantiate player
@@ -91,9 +97,6 @@ class Game:
                     Bomb(self, col, row)
                 if tile == 'P':
                     self.player = Player(self, col, row)
-                if tile == 'I':
-                    f = FloorTile(self, col, row)
-                    f.variant = "ice"
                 if tile == 'S':
                     Spike(self, col, row)
 
@@ -108,9 +111,16 @@ class Game:
     def run(self):
         while self.running:
             self.dt = self.clock.tick(FPS) / 1000
-            self.events()  #gets player input.
-            self.update()  #updates the game.
-            self.draw()  #creates sprites.
+            self.events()  #gets player input
+
+            #conditional in game loop checks if player has tocuhed spikes
+            if self.player_dead:
+                if pg.time.get_ticks() - self.death_start >= 2000:
+                    self.playing = False
+            else:
+                # if not, continue with regular game stuff
+                self.update()
+            self.draw()  #creates sprites
 
     #determine whether to 
     def events(self):
@@ -125,9 +135,6 @@ class Game:
                     self.playing = False
                 self.running = False
 
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_w:
-                    self.player.jump()
 
     #refreshes the screen and anything drawn.
     def update(self):
@@ -144,11 +151,11 @@ class Game:
     
     #actually draws the objects
     def draw(self):
-        self.screen.fill(BLUE)
+        self.screen.fill(BLACK)
         self.all_sprites.draw(self.screen)
-        self.draw_text("fps: "+str(floor(1/self.dt)),24, WHITE, WIDTH/2, HEIGHT/4)
-        self.draw_text(f"coins: {self.player.coins}",24, WHITE, WIDTH/2, HEIGHT/9)
-        self.draw_text(f"high score: {self.highscore}",24, WHITE, WIDTH/2, HEIGHT/12)
+        self.draw_text("fps: "+str(floor(1/self.dt)),24, WHITE, WIDTH/2, 0)
+        self.draw_text(f"coins: {self.player.coins}",24, WHITE, WIDTH/2, 50)
+        self.draw_text(f"high score: {self.highscore}",24, WHITE, WIDTH/2, 25)
         pg.display.flip()
 
 #run game loop

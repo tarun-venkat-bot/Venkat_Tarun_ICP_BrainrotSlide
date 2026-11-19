@@ -74,32 +74,24 @@ class Player(Sprite):
 
     # gets player input
     def get_keys(self):
-        keys = pg.key.get_pressed()
-        if not self.on_ice:
-            self.vel.x = 0
-            self.vel.y = 0
-
-        if keys[pg.K_a]:
-            # self.vx = -PLAYER_SPEED
-            self.vel.x = -PLAYER_SPEED
-            # self.acc.x = -PLAYER_ACC
-
-        if keys[pg.K_d]:
-            # self.vx = PLAYER_SPEED
-            self.vel.x = PLAYER_SPEED
-            # self.acc.x = PLAYER_ACC
-
-        if keys[pg.K_w]:
-            self.vel.y = -PLAYER_SPEED
-
-        if keys[pg.K_s]:
-            self.vel.y = PLAYER_SPEED
-
+        #we don't need diagonal normalization anymore
         if self.vel.length() > 0:
-            self.vel = self.vel.normalize() * PLAYER_SPEED
-            # 0.7071 is root(2) which is the hyptenuse of a pixel (1x1)
-            # stops diagonal motion from being faster, not needed for accerlation
-    
+            return
+        keys = pg.key.get_pressed()
+
+        #vectors make player continuosly move, until hitting a wall
+        if keys[pg.K_a]:
+            self.vel = vec(-PLAYER_SPEED, 0)
+
+        elif keys[pg.K_d]:
+            self.vel = vec(PLAYER_SPEED, 0)
+
+        elif keys[pg.K_w]:
+            self.vel = vec(0, -PLAYER_SPEED)
+
+        elif keys[pg.K_s]:
+            self.vel = vec(0, PLAYER_SPEED)
+
     def jump(self):
         pass
 
@@ -129,25 +121,23 @@ class Player(Sprite):
             
     def update(self):
         self.animate()
-        tile_hits = pg.sprite.spritecollide(self,self.game.all_tiles, False)
-        #prompted by cs50ai and chatgpt
-        self.on_ice = any(tile.variant == "ice" for tile in tile_hits)
 
         #physics/acceleration math done here before updates (most tweaked/updated code section)
         self.get_keys()
-        #ice friction, prompted by cs50ai and chatgpt
-        if self.on_ice:
-            self.vel.x *= 0.98
-            self.vel.y *= 0.98  
 
         #x collisions
         self.pos.x += self.vel.x
         self.hit_rect.centerx = self.pos.x
         collide_with_walls(self, self.game.all_walls, 'x')
+
         #y collisions
         self.pos.y += self.vel.y
         self.hit_rect.centery = self.pos.y
         collide_with_walls(self, self.game.all_walls, 'y')
+
+        #stops player when it hits a wall
+        if self.vel.x == 0 and self.vel.y == 0:
+            pass
 
         #actually setting the player's coords to based on collisions
         self.rect.center = self.hit_rect.center
@@ -162,6 +152,8 @@ class Player(Sprite):
                 hits[0].kill()
 
         spike_hits = pg.sprite.spritecollide(self, self.game.all_spikes, False)
+
+        #copied coin collision logic, made it result in game stop
         if spike_hits:
             self.game.player_died()
 
@@ -172,15 +164,8 @@ class Wall(Sprite):
         Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image.fill(GREEN)
+        self.image.fill(MAGENTA)
         self.rect = self.image.get_rect()
-        # self.rect.x = x
-        # self.rect.y = y
-        # self.vx, self.vy = 0,0
-        # self.x = x * TILESIZE
-        # self.y = y * TILESIZE
-        # self.rect.x = self.x
-        # self.rect.y = self.y
         self.vel = vec(0,0)
         self.pos = vec(x,y) *TILESIZE
         self.rect.center = self.pos
@@ -193,26 +178,12 @@ class Spike(Sprite):
         Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image.fill(RED)
-        self.rect = self.image.get_rect()
-        self.vel = vec(0,0)
-        self.pos = vec(x,y) *TILESIZE
-        self.rect.center = self.pos
-        print("spike instance created")
-
-class FloorTile(Sprite):
-    def __init__(self, game, x, y):
-        self.groups = game.all_sprites, game.all_tiles
-        Sprite.__init__(self, self.groups)
-        self.game = game
-        self.image = pg.Surface((TILESIZE, TILESIZE))
         self.image.fill(CYAN)
         self.rect = self.image.get_rect()
         self.vel = vec(0,0)
         self.pos = vec(x,y) *TILESIZE
         self.rect.center = self.pos
-        self.variant = "ice"
-        print("wall instance created")
+        print("spike instance created")
 
 class Particle(Sprite):
     def __init__(self, game, x, y):
@@ -220,7 +191,7 @@ class Particle(Sprite):
         Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pg.Surface((TILESIZE/4, TILESIZE/4))
-        self.image.fill(RED)
+        self.image.fill(YELLOW)
         self.rect = self.image.get_rect()
         self.vel = vec(randint(-180,180),randint(-180,180)) 
         # self.vel = vec(0,0)
@@ -328,13 +299,9 @@ class Bomb(Sprite):
 
         #code prompted to chatgpt with assistance from cs50.ai
         # self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image = pg.Surface((TILESIZE, TILESIZE), pg.SRCALPHA) 
+        self.image = pg.Surface((TILESIZE, TILESIZE)) 
         # pg.SCRALPHA is a pygame method to make an object's parts transparent
-        pg.draw.circle(self.image, BLACK, (TILESIZE//2, TILESIZE//2), TILESIZE//2)  
-
-        # code below was used to make OG gold coins, issues arised when changing color to GOLD
-        # self.image.set_colorkey(BLACK)
-        # self.image.fill(GOLD)
+        pg.draw.circle(self.image, GOLD, (TILESIZE//2, TILESIZE//2), TILESIZE//2)  
         
         self.rect = self.image.get_rect()
         self.vel = vec(0,0)
