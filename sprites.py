@@ -63,9 +63,8 @@ class Player(Sprite):
         self.last_update = 0
 
         #accounts for player state (state machine)
-        self.jumping = False
         self.moving = False
-        self.on_ice = False
+        self.jumping = False
 
         # coins and debug prints
         self.coins = 0 
@@ -91,6 +90,10 @@ class Player(Sprite):
 
         elif keys[pg.K_s]:
             self.vel = vec(0, PLAYER_SPEED)
+
+        elif keys[pg.K_r]:
+            self.pos.x = 130
+            self.pos.y = 670
 
     def jump(self):
         pass
